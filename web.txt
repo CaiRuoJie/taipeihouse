@@ -1,0 +1,73 @@
+library(shiny)
+library(semantic.dashboard)
+library(shiny.semantic)
+library(leaflet)
+library(leaflet.extras)
+
+try=read.csv("C:/Users/user/Desktop/臺北市南港區.csv")
+point.df <- data.frame(
+  add=try$地段位置或門牌,
+  lat=try$lat,
+  lon=try$lon)
+
+content <- paste0("地址:",try$地段位置或門牌,"<br>",
+                  "交易年/月:",try$交易年月,"<br>",
+                  "總價(萬元):",try$總價,"<br>",
+                  "單價(萬元/坪):",try$單價,"<br>",
+                  "總面積(坪):",try$總面積,"<br>",
+                  "型態:",try$型態,"<br>",
+                  "屋齡:",try$屋齡,"<br>",
+                  "樓別/樓高:",try$樓別.樓高,"<br>",
+                  "交易標的:",try$交易標的,"<br>",
+                  "建物現況格局:",try$建物現況格局,"<br>",
+                  "車位總價(萬元):",try$車位總價,"<br>",
+                  "主要用途:",try$主要用途)
+
+
+ui <- dashboardPage(
+  #頁眉
+  dashboardHeader(title="台北市房屋特徵",color="black",inverted = TRUE), 
+  #側邊欄
+  dashboardSidebar(
+    size="wide",
+    sidebarMenu(
+      #選行政區的按鈕
+      selectInput("district","請選擇行政區",choices = unique(try$地段位置或門牌)),
+      menuItem(tabName = "map",text = "地圖",icon = icon("map")),
+      menuItem(tabName = "table",text = "資料",icon = icon("table"))
+    )
+  ),
+  #主體
+  dashboardBody(
+    tabItems(
+      #selected=1,
+      tabItem(
+        tabName = "map",
+        tags$style(type = "text/css", "#map {height: calc(100vh - 80px) !important;}"),
+        leafletOutput("map")
+      ),
+      tabItem(
+        tabName = "table",
+        fluidRow(
+          h1("行政區實價登錄資料"),
+          semantic_DTOutput("datatable")
+        )
+      ) 
+    )
+  )
+)
+
+server <- function(input, output) {
+  output$map=renderLeaflet(
+    leaflet(point.df)%>%
+      addTiles()%>%
+      addSearchOSM(options = searchOptions(hideMarkerOnCollapse = TRUE))%>%
+      addMarkers(lng = ~lon,lat = ~lat,popup = ~as.character(content))
+  )
+  
+  output$datatable <- DT::renderDataTable(
+    semantic_DT(try)
+  )
+}
+
+shinyApp(ui, server)
